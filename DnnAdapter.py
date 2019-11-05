@@ -4,7 +4,7 @@ import numpy
 
 class DnnAdapter:
 
-    def _init_(self, model_path, weights_path=None, task_type=None):  # и другие параметры пустым значением по умолчанию
+    def __init__(self, model_path, weights_path=None, task_type=None):  # и другие параметры пустым значением по умолчанию
         self.model = model_path
         self.weights = weights_path
         self.task_type = task_type
@@ -14,9 +14,9 @@ class DnnAdapter:
         img = cv2.imread(image)
         # forward
 
-        if self.task_type == 'face detection':
+        if self.task_type == 'face_detection':
             net = cv2.dnn.readNetFromCaffe(self.model, self.weights)
-            (h, w) = image.shape[:2]
+            (h, w) = img.shape[:2]
             blob = cv2.dnn.blobFromImage(cv2.resize(img, (300, 300)), 1.0, (300, 300), (104.0, 177.0, 123.0))
             net.setInput(blob)
             detections = net.forward()
@@ -41,8 +41,16 @@ class DnnAdapter:
             self._output_classification(output)
 
     def _output_classification(self, output):
-        rows = open('Classification/synset_words.txt').read().strip().split("\n")
-        classes = [r[r.find(" ") + 1:].split(",")[0] for r in rows]
-        indexes = numpy.argsort(output[0])[::-1][:5]
-        for (i, idx) in enumerate(indexes):
-            print("{}. label: {}, probability: {:.5}".format(i + 1, classes[idx], output[0][idx]))
+
+        with open('Classification/synset_words.txt') as f:
+            classes = [x[x.find(' ') + 1:] for x in f]
+        indexes = numpy.argsort(output[0])[-5:]
+        for i in reversed(indexes):
+            print('class:', classes[i], ' probability:', output[0][i])
+
+
+        #rows = open('Classification/synset_words.txt').read().strip().split("\n")
+        #classes = [r[r.find(" ") + 1:].split(",")[0] for r in rows]
+        #indexes = numpy.argsort(output[0])[::-1][:5]
+        #for (i, idx) in enumerate(indexes):
+        #    print("{}. label: {}, probability: {:.5}".format(i + 1, classes[idx], output[0][idx]))
