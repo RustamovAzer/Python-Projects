@@ -47,10 +47,3 @@ class DnnAdapter:
         indexes = numpy.argsort(output[0])[-5:]
         for i in reversed(indexes):
             print('class:', classes[i], ' probability:', output[0][i])
-
-
-        #rows = open('Classification/synset_words.txt').read().strip().split("\n")
-        #classes = [r[r.find(" ") + 1:].split(",")[0] for r in rows]
-        #indexes = numpy.argsort(output[0])[::-1][:5]
-        #for (i, idx) in enumerate(indexes):
-        #    print("{}. label: {}, probability: {:.5}".format(i + 1, classes[idx], output[0][idx]))
