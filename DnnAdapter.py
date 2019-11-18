@@ -1,32 +1,35 @@
 import cv2
 import numpy
+import os
+from datetime import date
 
 
 class DnnAdapter:
 
-    def __init__(self, model_path, weights_path=None, task_type=None, net = None):  # и другие параметры пустым значением по умолчанию
-        self.model = model_path
-        self.weights = weights_path
-        self.task_type = task_type
-        self.net = cv2.dnn.readNetFromCaffe(self.model, self.weights)
+    def __init__(self, args = None):
+        self.model = args["prototxt"]
+        self.weights = args["model"]
+        self.task_type = args["task"]
+        self.net = cv2.dnn.readNet(self.model, self.weights)
 
     def process_image(self, image):
-        # Read image
         img = cv2.imread(image)
-        # forward
 
         if self.task_type == 'face_detection':
-
             blob = cv2.dnn.blobFromImage(cv2.resize(img, (300, 300)), 1.0, (300, 300), (104.0, 177.0, 123.0))
             self.net.setInput(blob)
             output = self.net.forward()
             self._output_face_detection(output, img)
-
         if self.task_type == 'classification':
             blob = cv2.dnn.blobFromImage(img, 1, (224, 224), (104, 117, 123))
             self.net.setInput(blob)
             output = self.net.forward()
             self._output_classification(output)
+        if self.task_type == "road_segmentation": #Не работает
+            blob = cv2.dnn.blobFromImage(cv2.resize(img, (512, 896)), 1, (512, 896), (104.0, 177.0, 123.0))
+            self.net.setInput(blob)
+            output = self.net.forward()
+            self._output_road_segmentaotion(output)
 
     def _output_classification(self, output):
 
@@ -34,7 +37,7 @@ class DnnAdapter:
             classes = [x[x.find(' ') + 1:] for x in f]
         indexes = numpy.argsort(output[0])[-5:]
         for i in reversed(indexes):
-            print('class:', classes[i], ' probability:', output[0][i])
+            print(i, ': class:', classes[i], ' probability:', output[0][i])
 
     def _output_face_detection(self, output, img):
         (h, w) = img.shape[:2]
@@ -49,5 +52,14 @@ class DnnAdapter:
                               (0, 255, 0), 2)
                 cv2.putText(img, text, (startX, y),
                             cv2.FONT_HERSHEY_COMPLEX, 0.45, (0, 0, 255), 1)
+        cv2.imwrite(os.getcwd() + "/output/" + self.task_type + date.today().strftime("_%Y_%m_%d") + ".jpg", img)
         cv2.imshow("Output", img)
+        cv2.waitKey(0)
+
+
+    #Не работает
+    def _output_road_segmentaotion(self, output, img):
+        print(output.shape)
+        output_image = ((0.4 * img) + (0.6 * output)).astype("uint8")
+        cv2.imshow("Output", output_image)
         cv2.waitKey(0)
