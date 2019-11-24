@@ -26,10 +26,11 @@ class DnnAdapter:
             output = self.net.forward()
             self._output_classification(output)
         if self.task_type == "road_segmentation": #Не работает
-            blob = cv2.dnn.blobFromImage(cv2.resize(img, (512, 896)), 1, (512, 896), (104.0, 177.0, 123.0))
+            resized_img = cv2.resize(img, (896, 512), interpolation=cv2.INTER_AREA)
+            blob = cv2.dnn.blobFromImage(resized_img, 1, (896, 512), (104.0, 177.0, 123.0))
             self.net.setInput(blob)
             output = self.net.forward()
-            self._output_road_segmentaotion(output)
+            self._output_road_segmentaotion(output, resized_img)
 
     def _output_classification(self, output):
 
@@ -58,8 +59,17 @@ class DnnAdapter:
 
 
     #Не работает
-    def _output_road_segmentaotion(self, output, img):
+    def _output_road_segmentaotion(self, output, resized_img):
         print(output.shape)
-        output_image = ((0.4 * img) + (0.6 * output)).astype("uint8")
-        cv2.imshow("Output", output_image)
+        print(resized_img.shape)
+        rows,cols = resized_img.shape[:2]
+        for i in range(rows):
+            for k in range(cols):
+                if output[0,0,i,k] > 0.5:
+                    resized_img[i,k] = [0,0,255]
+                if output[0,1,i,k] > 0.5:
+                    resized_img[i,k] = [0,255,0]
+                if output[0,2,i,k] > 0.5:
+                    resized_img[i,k] = [255,0,0]
+        cv2.imshow("Output", resized_img)
         cv2.waitKey(0)
