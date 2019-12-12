@@ -11,21 +11,22 @@ class DnnAdapter:
         self.weights = args["model"]
         self.task_type = args["task"]
         self.net = cv2.dnn.readNet(self.model, self.weights)
+        self.width, self.height = args["input"].values()
 
     def process_image(self, image):
         img = cv2.imread(image)
 
         if self.task_type == 'face_detection':
-            blob = cv2.dnn.blobFromImage(cv2.resize(img, (300, 300)), 1.0, (300, 300), (104.0, 177.0, 123.0))
+            blob = cv2.dnn.blobFromImage(cv2.resize(img, (self.width, self.height)), 1.0, (self.width, self.height))
             self.net.setInput(blob)
-            output = self.net.forward()
-            self._output_face_detection(output, img)
+            result = self.net.forward()
+            self._output_face_detection(result, img)
         if self.task_type == 'classification':
-            blob = cv2.dnn.blobFromImage(img, 1, (224, 224), (104, 117, 123))
+            blob = cv2.dnn.blobFromImage(cv2.resize(img, (self.width, self.height)), 1, (self.width, self.height))
             self.net.setInput(blob)
-            output = self.net.forward()
-            self._output_classification(output)
-        if self.task_type == "road_segmentation": #Не работает
+            result = self.net.forward()
+            self._outputClassification(result)
+        if self.task_type == "road_segmentation":
             resized_img = cv2.resize(img, (896, 512), interpolation=cv2.INTER_AREA)
             blob = cv2.dnn.blobFromImage(resized_img, 1, (896, 512), (104.0, 177.0, 123.0))
             self.net.setInput(blob)
@@ -59,17 +60,16 @@ class DnnAdapter:
 
 
     #Не работает
-    def _output_road_segmentaotion(self, output, resized_img):
-        print(output.shape)
-        print(resized_img.shape)
-        rows,cols = resized_img.shape[:2]
-        for i in range(rows):
-            for k in range(cols):
-                if output[0,0,i,k] > 0.5:
-                    resized_img[i,k] = [0,0,255]
-                if output[0,1,i,k] > 0.5:
-                    resized_img[i,k] = [0,255,0]
-                if output[0,2,i,k] > 0.5:
-                    resized_img[i,k] = [255,0,0]
-        cv2.imshow("Output", resized_img)
+    def _output_road_segmentaotion(self, result, resized_img):
+        image = cv2.resize(resized_img, (self.width, self.height))
+        cv2.imshow("Output", image)
+        flag = 0
+        colors = [(0, 255, 0), (0, 0, 255), (255, 0, 0), (0, 0, 0)]  # BGR of BG, road, crub, mark
+        for i in range(self.height):
+            for j in range(self.width):
+                lst = [x[i][j] for x in result[0]]
+                index = lst.index(max(lst))
+                image[i][j] = colors[index]
+        cv2.imwrite(os.getcwd() + "/output/" + self.task_type + date.today().strftime("_%Y_%m_%d") + ".jpg", image)
+        cv2.imshow("Result", image)
         cv2.waitKey(0)
